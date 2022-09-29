@@ -5,7 +5,7 @@ from logging import exception
 from os import environ
 
 #CONSTANTS
-TABLE = 'keylogger'
+TABLE = 'logger'
 PARAMS = '?authSource=admin'
 URL = environ.get('MONGODB_URL') or "mongodb://root:admin@localhost/"
 MSG_SUCESS = "Insert sucessfully"
