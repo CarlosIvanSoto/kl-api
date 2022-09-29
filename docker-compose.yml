@@ -1,0 +1,40 @@
+version: "3"
+
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - FLASK_DEBUG=True
+      - FLASK_APP=src/app.py
+      - FLASK_RUN_HOST=0.0.0.0
+      - MONGODB_URL=mongodb://root:admin@mongo/ 
+    volumes:
+      - ./src:/code/src
+    depends_on:
+      - mongo
+    expose:
+      - 3000
+
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: admin
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_URL: mongodb://root:admin@mongo/  
+    depends_on:
+      - mongo

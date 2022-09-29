@@ -1,0 +1,4 @@
+flask
+pymongo
+Flask-PyMongo
+cryptography
