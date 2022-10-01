@@ -79,35 +79,9 @@ def viewHosts():
         exception("[SERVER]: Error in route /host [GET] ->")
         return jsonify({"message": MSG_INT_ERROR}), 500
 
-@app.route('/log/reverse', methods=['GET'])
-def viewLogsDesc():
-    try:
-        data = mongo.db.logs.find()
-        toReturn = []
-        for doc in data:
-            del doc['_id']
-            doc.update({'message': decifrar(doc['message'])})
-            toReturn.append(doc)
-        if toReturn:
-            toReturn.reverse()
-            #toReturn = sorted(1, key=lambda x: x['datetime'], reverse=True)
-            return jsonify({
-                "count": len(toReturn),
-                "message":"Log's list",
-                "results": toReturn
-            }), 200
-        else:
-            return jsonify({
-                "count": 0,
-                "message":"Log's list",
-                "results": {}
-            }), 200
-    except Exception:
-        exception("[SERVER]: Error in route /log [GET] ->")
-        return jsonify({"message": MSG_INT_ERROR}), 500
-
 @app.route('/log', methods=['GET'])
-def viewLogs():
+@app.route('/log/<reverse>', methods=['GET'])
+def viewLogs(reverse = ''):
     try:
         data = mongo.db.logs.find()
         toReturn = []
@@ -116,6 +90,8 @@ def viewLogs():
             doc.update({'message': decifrar(doc['message'])})
             toReturn.append(doc)
         if toReturn:
+            if reverse:
+                toReturn.reverse()
             return jsonify({
                 "count": len(toReturn),
                 "message":"Log's list",
